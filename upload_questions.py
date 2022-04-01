@@ -1,10 +1,15 @@
 import logging
 import os
 
-from redis_scripts import create_redis_connect
+from utils import create_redis_connect
 
 
-logger = logging.getLogger(__file__)
+logging.basicConfig (
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
+logger = logging.getLogger(__name__)
 
 
 def get_text_by_index(list, start_index):
@@ -19,7 +24,7 @@ def get_text_by_index(list, start_index):
             text = text.replace('\n', ' ')
 
     return None
-        
+     
 
 def get_questions_from_file(from_folder, file):
     with open(f'{from_folder}/{file}', 'r', encoding='KOI8-R') as questions_file:
@@ -59,7 +64,7 @@ def load_questions_to_redis_db(questions):
     connect = create_redis_connect()
     for question in questions:
         connect.hset(
-            'question',
+            name='question',
             key=question['question'],
             value=question['answer'])
 
