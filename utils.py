@@ -1,6 +1,3 @@
-from itertools import count
-from multiprocessing import connection
-from turtle import right
 from environs import Env
 from redis import Redis
 

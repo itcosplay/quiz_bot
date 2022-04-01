@@ -132,7 +132,7 @@ def main():
     dp.add_handler
     
     dp.add_handler(
-        ConversationHandler(
+        ConversationHandler (
             entry_points=[MessageHandler(Filters.regex('^(Новый вопрос)$'), send_question)],
             states = {
                 ASKED_QUESTION: [MessageHandler(Filters.text & (~Filters.command), handle_answer)]
