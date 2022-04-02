@@ -10,15 +10,138 @@ from vk_api.longpoll import VkLongPoll
 from vk_api.keyboard import VkKeyboard
 from vk_api.keyboard import VkKeyboardColor
 
+from utils import create_redis_connect
+from utils import get_question
+from utils import check_answer
+from utils import get_explanation
+from utils import set_user_score
+from utils import get_or_set_vk_user_state
+
 
 logger = logging.getLogger(__name__)
 
 
-def echo(event, vk_api):
-    vk_api.messages.send(
-        user_id=event.user_id,
-        message=event.text,
-        random_id=random.randint(1,1000))
+def handle_commands(event, vk_api, connect):
+    keyboard = VkKeyboard(one_time=True)
+
+    keyboard.add_button('Новый вопрос', color=VkKeyboardColor.POSITIVE)
+    keyboard.add_button('Сдаться', color=VkKeyboardColor.NEGATIVE)
+    keyboard.add_line()
+    keyboard.add_button('Мой счет', color=VkKeyboardColor.POSITIVE)
+
+    user_id=event.user_id
+
+    if event.text == "Новый вопрос":
+        user_state = get_or_set_vk_user_state(connect, user_id)
+
+        if user_state == 'NEUTRAL':
+            current_question = get_question(connect)
+            print('right answer: ', connect.hget('question', current_question))
+            connect.set(user_id, current_question)
+            connect.set(f'{user_id}_state', 'ASKED_QUESTION')
+
+            vk_api.messages.send(
+                user_id=user_id,
+                message=current_question,
+                keyboard=keyboard.get_keyboard(),
+                random_id=random.randint(1,1000))
+
+        else:
+            vk_api.messages.send(
+                user_id=user_id,
+                message='Чтобы получить следующий вопрос, вам необходимо дать ответ на текущий :)',
+                keyboard=keyboard.get_keyboard(),
+                random_id=random.randint(1,1000))
+
+    elif event.text == 'Сдаться':
+        user_state = get_or_set_vk_user_state(connect, user_id)
+
+        if user_state == 'ASKED_QUESTION':
+            current_question = connect.get(user_id)
+            right_answer = connect.hget('question', current_question)
+
+            text = 'Что ж, вот какой был правильный ответ:'
+            text += f'\n{right_answer}'
+            text += '\n\nВот другой вопрос'
+
+            vk_api.messages.send(
+                user_id=user_id,
+                message=text,
+                keyboard=keyboard.get_keyboard(),
+                random_id=random.randint(1,1000))
+
+            current_question = get_question(connect)
+            connect.set(user_id, current_question)
+            print('right answer: ', connect.hget('question', current_question))
+
+            vk_api.messages.send(
+                user_id=user_id,
+                message=current_question,
+                keyboard=keyboard.get_keyboard(),
+                random_id=random.randint(1,1000))
+
+        else:
+            vk_api.messages.send(
+                user_id=user_id,
+                message='Используйте меню чтобы сыграть в викторину ;)',
+                keyboard=keyboard.get_keyboard(),
+                random_id=random.randint(1,1000))
+
+    elif event.text == 'Мой счет':
+        user_state = get_or_set_vk_user_state(connect, user_id)
+
+        if user_state == 'NEUTRAL':
+            user_id = str(user_id)
+            user_score = connect.get(f'{user_id}_score')
+            text = f'Правильных ответов: {user_score}'
+
+            vk_api.messages.send(
+                    user_id=user_id,
+                    message=text,
+                    keyboard=keyboard.get_keyboard(),
+                    random_id=random.randint(1,1000))
+        
+        else:
+            vk_api.messages.send(
+                user_id=user_id,
+                message='Чтобы увидеть счет, ответьте на вопрос :)',
+                keyboard=keyboard.get_keyboard(),
+                random_id=random.randint(1,1000))
+    
+    else:
+        user_state = get_or_set_vk_user_state(connect, user_id)
+
+        if user_state == 'NEUTRAL':
+            vk_api.messages.send(
+                user_id=user_id,
+                message='Используйте меню чтобы сыграть в викторину ;)',
+                keyboard=keyboard.get_keyboard(),
+                random_id=random.randint(1,1000))
+        
+        if user_state == 'ASKED_QUESTION':
+            user_answer = event.text
+            current_question = connect.get(user_id)
+            if check_answer(connect, current_question, user_answer):
+                connect.set(f'{user_id}_state', 'NEUTRAL')
+                additional_answer = get_explanation(connect, current_question)
+                text = 'Правильно! Поздравляю!'
+                text += f' {additional_answer}'
+                text += '\n\nДля следующего вопроса нажми «Новый вопрос»'
+
+                set_user_score(connect, user_id)
+
+                vk_api.messages.send(
+                    user_id=user_id,
+                    message=text,
+                    keyboard=keyboard.get_keyboard(),
+                    random_id=random.randint(1,1000))
+            
+            else:
+                vk_api.messages.send(
+                    user_id=user_id,
+                    message='Неправильно… Попробуешь ещё раз?',
+                    keyboard=keyboard.get_keyboard(),
+                    random_id=random.randint(1,1000))
 
 
 def main():
@@ -30,24 +153,15 @@ def main():
         level=logging.INFO
     )
 
+    connect = create_redis_connect()
+
     vk_session = VkApi(token=os.environ['VK_GROUP_TOKEN'])
     vk_api = vk_session.get_api()
-
-    keyboard = VkKeyboard(one_time=True)
-    keyboard.add_button('Белая кнопка', color=VkKeyboardColor.DEFAULT)
-    keyboard.add_button('Зелёная кнопка', color=VkKeyboardColor.POSITIVE)
-
-    keyboard.add_line()  # Переход на вторую строку
-    keyboard.add_button('Красная кнопка', color=VkKeyboardColor.NEGATIVE)
-
-    keyboard.add_line()
-    keyboard.add_button('Синяя кнопка', color=VkKeyboardColor.PRIMARY)
     longpoll = VkLongPoll(vk_session)
 
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-            if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-                echo(event, vk_api)
+            handle_commands(event, vk_api, connect)
 
 
 if __name__ == '__main__':

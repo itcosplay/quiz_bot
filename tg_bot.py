@@ -1,5 +1,4 @@
 import logging
-from turtle import right, update
 
 from environs import Env
 
@@ -112,6 +111,7 @@ def give_up(update, _):
 def leave_quiz(update, _):
     update.message.reply_text('Вы покинули виктрорину, если захотите сыграть еще, нажмите «Новый вопрос»')
     return ConversationHandler.END
+
 
 def show_score(update, _):
     user_id = update.message.from_user.id

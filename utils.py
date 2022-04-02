@@ -1,6 +1,7 @@
 from environs import Env
 from redis import Redis
 
+
 env = Env()
 env.read_env()
 
@@ -33,7 +34,8 @@ def check_answer(connect, question, user_answer):
 
 def get_short_answer(unswer):
     return unswer.replace(
-        ',', '.').replace('(', '.').split('.')[0].strip().lower()
+        ',', '.').replace(
+        '(', '.').replace('"', '.').split('.')[0].strip().lower()
 
 
 def get_explanation(connect, question):
@@ -72,5 +74,26 @@ def set_user_score(connect, user_id):
         connect.set(f'{user_id}_score', current_user_score)
 
 
+def get_or_set_vk_user_state(connect, user_id):
+    '''
+    If user has state - return state,
+    else will be created new state and returned one
+    '''
+    user_id = str(user_id)
+    user_state = connect.get(f'{user_id}_state')
+
+    if user_state is None:
+        connect.set(f'{user_id}_state', 'NEUTRAL')
+        return('NEUTRAL') # ASKED_QUESTION
+
+    else:
+        return user_state
+    
+
 if __name__ == '__main__':
+    env = Env()
+    env.read_env()
+
+    connect = create_redis_connect()
+    get_or_set_vk_user_state(connect, '12345')
     pass

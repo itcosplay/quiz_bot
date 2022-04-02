@@ -79,9 +79,8 @@ def main(from_folder='questions'):
     for file in os.listdir(from_folder):
         questions = get_questions_from_file(from_folder, file)
         load_questions_to_redis_db(questions)
+        print(f'questions from {file} was uploaded')
     
-    logger.info('Questions was uploaded successfuly')
-
 
 if __name__ == '__main__':
     main()
