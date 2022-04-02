@@ -47,7 +47,6 @@ def send_question(update: Update, _):
 
     current_question = get_question(connect)
     connect.set(user_id, current_question)
-    print('right answer: ', connect.hget('question', current_question))
 
     update.message.reply_text(text=current_question)
 
@@ -101,7 +100,6 @@ def give_up(update, _):
 
     current_question = get_question(connect)
     connect.set(user_id, current_question)
-    print('right answer: ', connect.hget('question', current_question))
 
     update.message.reply_text(current_question)
 
@@ -121,6 +119,7 @@ def show_score(update, _):
     text = f'Правильных ответов: {user_score}'
 
     update.message.reply_text(text)
+
 
 def main():
     """Start the bot."""

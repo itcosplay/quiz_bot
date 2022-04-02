@@ -36,7 +36,6 @@ def handle_commands(event, vk_api, connect):
 
         if user_state == 'NEUTRAL':
             current_question = get_question(connect)
-            print('right answer: ', connect.hget('question', current_question))
             connect.set(user_id, current_question)
             connect.set(f'{user_id}_state', 'ASKED_QUESTION')
 
@@ -72,7 +71,6 @@ def handle_commands(event, vk_api, connect):
 
             current_question = get_question(connect)
             connect.set(user_id, current_question)
-            print('right answer: ', connect.hget('question', current_question))
 
             vk_api.messages.send(
                 user_id=user_id,
