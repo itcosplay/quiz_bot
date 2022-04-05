@@ -12,9 +12,6 @@ def create_redis_connect(host, port, password):
     if connect.ping():
         return connect
 
-    else:
-        raise
-
 
 def get_question(connect):
     question = connect.hrandfield('question')
