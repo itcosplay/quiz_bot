@@ -151,7 +151,11 @@ def main():
         level=logging.INFO
     )
 
-    connect = create_redis_connect()
+    connect = create_redis_connect(
+        host=env('REDIS_HOST'),
+        port=env('REDIS_PORT'),
+        password=env('REDIS_PASSWORD')
+    )
 
     vk_session = VkApi(token=os.environ['VK_GROUP_TOKEN'])
     vk_api = vk_session.get_api()

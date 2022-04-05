@@ -14,7 +14,7 @@ from utils import get_explanation
 from utils import set_user_score
 
 
-logging.basicConfig (
+logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
@@ -24,16 +24,20 @@ logger = logging.getLogger(__name__)
 env = Env()
 env.read_env()
 
-connect = create_redis_connect()
+connect = create_redis_connect(
+    host=env('REDIS_HOST'),
+    port=env('REDIS_PORT'),
+    password=env('REDIS_PASSWORD')
+)
 
 quiz_keyboard = [
-    ['Новый вопрос', 'Сдаться'], 
+    ['Новый вопрос', 'Сдаться'],
     ['Мой счет']
 ]
 
 reply_markup = ReplyKeyboardMarkup(quiz_keyboard, resize_keyboard=True)
 
-ASKED_QUESTION =  range(1)
+ASKED_QUESTION = range(1)
 
 
 def start(update: Update, _):
@@ -57,9 +61,12 @@ def handle_answer(update, _):
     user_answer = update.message.text
 
     if user_answer == 'Новый вопрос':
-        update.message.reply_text('Чтобы получить следующий вопрос, вам необходимо дать ответ на текущий :)')
+        update.message.reply_text(
+            'Чтобы получить следующий вопрос,'
+            ' вам необходимо дать ответ на текущий :)'
+        )
         return ASKED_QUESTION
-    
+
     if user_answer == 'Сдаться':
         give_up(update, _)
         return
@@ -70,18 +77,18 @@ def handle_answer(update, _):
 
     user_id = update.message.from_user.id
     current_question = connect.get(user_id)
-    
+
     if check_answer(connect, current_question, user_answer):
         additional_answer = get_explanation(connect, current_question)
         text = 'Правильно! Поздравляю!'
         text += f' {additional_answer}'
         text += '\n\nДля следующего вопроса нажми «Новый вопрос»'
-        
+
         set_user_score(connect, user_id)
 
         update.message.reply_text(text)
         return ConversationHandler.END
-    
+
     else:
         update.message.reply_text('Неправильно… Попробуешь ещё раз?')
         return ASKED_QUESTION
@@ -107,7 +114,10 @@ def give_up(update, _):
 
 
 def leave_quiz(update, _):
-    update.message.reply_text('Вы покинули виктрорину, если захотите сыграть еще, нажмите «Новый вопрос»')
+    update.message.reply_text(
+        'Вы покинули виктрорину,'
+        ' если захотите сыграть еще, нажмите «Новый вопрос»'
+    )
     return ConversationHandler.END
 
 
@@ -129,16 +139,26 @@ def main():
 
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler
-    
+
     dp.add_handler(
-        ConversationHandler (
-            entry_points=[MessageHandler(Filters.regex('^(Новый вопрос)$'), send_question)],
-            states = {
-                ASKED_QUESTION: [MessageHandler(Filters.text & (~Filters.command), handle_answer)]
+        ConversationHandler(
+            entry_points=[
+                MessageHandler(
+                    Filters.regex('^(Новый вопрос)$'),
+                    send_question
+                )
+            ],
+            states={
+                ASKED_QUESTION: [
+                    MessageHandler(
+                        Filters.text & (~Filters.command),
+                        handle_answer
+                    )
+                ]
             },
             fallbacks=[CommandHandler('refuse', leave_quiz)])
         )
-    
+
     dp.add_handler(MessageHandler(Filters.regex('^(Мой счет)$'), show_score))
 
     updater.start_polling()
