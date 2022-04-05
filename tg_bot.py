@@ -8,7 +8,6 @@ from telegram.ext import Filters
 from telegram.ext import ConversationHandler
 
 from utils import create_redis_connect
-from utils import get_question
 from utils import check_answer
 from utils import get_explanation
 from utils import set_user_score
@@ -44,7 +43,7 @@ def start(update: Update, _):
 def send_question(update: Update, _):
     user_id = update.message.from_user.id
 
-    current_question = get_question(connect)
+    current_question = connect.hrandfield('question')
     connect.set(user_id, current_question)
 
     update.message.reply_text(text=current_question)
@@ -100,7 +99,7 @@ def give_up(update, _):
     text += '\n\nВот другой вопрос'
     update.message.reply_text(text)
 
-    current_question = get_question(connect)
+    current_question = connect.hrandfield('question')
     connect.set(user_id, current_question)
 
     update.message.reply_text(current_question)
