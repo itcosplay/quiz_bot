@@ -7,12 +7,7 @@ from environs import Env
 from utils import create_redis_connect
 
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__file__)
 
 
 def get_text_by_index(list, start_index):
@@ -79,6 +74,11 @@ def main():
     '''Load questions from folders' files.txt to Redis'''
     env = Env()
     env.read_env()
+
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO
+    )
 
     parser = argparse.ArgumentParser(
         description='Выгружает вопросы из папки в Redis'

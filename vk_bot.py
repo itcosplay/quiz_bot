@@ -18,7 +18,7 @@ from utils import set_user_score
 from utils import get_or_set_vk_user_state
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__file__)
 
 
 def handle_commands(event, vk_api, connect):
@@ -146,7 +146,7 @@ def main():
     env = Env()
     env.read_env()
 
-    logging.basicConfig (
+    logging.basicConfig(
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=logging.INFO
     )

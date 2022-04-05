@@ -4,7 +4,7 @@ from redis import Redis
 def create_redis_connect(host, port, password):
     connect = Redis(
         host=host,
-        port=port, 
+        port=port,
         password=password,
         decode_responses=True
     )
@@ -38,7 +38,7 @@ def get_explanation(connect, question):
             break
         if char == ',':
             break
-        if char =='(':
+        if char == '(':
             index -= 1
             break
 
@@ -46,9 +46,9 @@ def get_explanation(connect, question):
 
     explanation = right_answer[index:].strip()
 
-    if len(explanation) > 2: 
+    if len(explanation) > 2:
         return right_answer[index:]
-    
+
     else:
         return ''
 
@@ -59,7 +59,7 @@ def set_user_score(connect, user_id):
 
     if current_user_score is None:
         connect.set(f'{user_id}_score', 1)
-    
+
     else:
         current_user_score = int(current_user_score) + 1
         connect.set(f'{user_id}_score', current_user_score)
@@ -79,12 +79,3 @@ def get_or_set_vk_user_state(connect, user_id):
 
     else:
         return user_state
-    
-
-if __name__ == '__main__':
-    env = Env()
-    env.read_env()
-
-    connect = create_redis_connect()
-    get_or_set_vk_user_state(connect, '12345')
-    pass

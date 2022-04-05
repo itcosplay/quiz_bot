@@ -14,12 +14,7 @@ from utils import get_explanation
 from utils import set_user_score
 
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__file__)
 
 env = Env()
 env.read_env()
@@ -133,6 +128,10 @@ def show_score(update, _):
 
 def main():
     """Start the bot."""
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO
+    )
 
     updater = Updater(env('TG_BOT_TOKEN'), use_context=True)
     dp = updater.dispatcher
