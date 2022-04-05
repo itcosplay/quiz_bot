@@ -1,3 +1,4 @@
+import argparse
 import logging
 import os
 
@@ -69,18 +70,27 @@ def load_questions_to_redis_db(questions):
             value=question['answer'])
 
 
-def main(from_folder='questions'):
+def main():
     '''Load questions from folders' files.txt to Redis'''
 
-    if not os.path.isdir(from_folder):
+    parser = argparse.ArgumentParser(
+        description='Выгружает вопросы из папки в Redis'
+    )
+    parser.add_argument('-f', '--folder', default='questions', help='Наименование папки')
+    parser.parse_args()
+    args = parser.parse_args()
+
+    folder = args.folder
+
+    if not os.path.isdir(folder):
         logger.error('Folder "questions" is not exists...')
         return
 
-    for file in os.listdir(from_folder):
-        questions = get_questions_from_file(from_folder, file)
+    for file in os.listdir(folder):
+        questions = get_questions_from_file(folder, file)
         load_questions_to_redis_db(questions)
         print(f'questions from {file} was uploaded')
-    
+
 
 if __name__ == '__main__':
     main()
