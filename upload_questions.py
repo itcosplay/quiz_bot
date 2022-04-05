@@ -26,8 +26,6 @@ def get_text_by_index(list, start_index):
             text += list[index]
             text = text.replace('\n', ' ')
 
-    return None
-
 
 def get_questions_from_file(from_folder, file):
     with open(
