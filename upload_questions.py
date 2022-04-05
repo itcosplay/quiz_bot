@@ -2,6 +2,8 @@ import argparse
 import logging
 import os
 
+from environs import Env
+
 from utils import create_redis_connect
 
 
@@ -66,8 +68,7 @@ def get_questions_from_file(from_folder, file):
     return quizzes
 
 
-def load_questions_to_redis_db(quizzes):
-    connect = create_redis_connect()
+def load_questions_to_redis_db(quizzes, connect):
     for quiz in quizzes:
         connect.hset(
             name='question',
@@ -78,6 +79,8 @@ def load_questions_to_redis_db(quizzes):
 
 def main():
     '''Load questions from folders' files.txt to Redis'''
+    env = Env()
+    env.read_env()
 
     parser = argparse.ArgumentParser(
         description='Выгружает вопросы из папки в Redis'
@@ -94,9 +97,15 @@ def main():
         logger.error('Folder "questions" is not exists...')
         return
 
+    host = env('REDIS_HOST')
+    port = env('REDIS_PORT')
+    password = env('REDIS_PASSWORD')
+
+    connect = create_redis_connect(host, port, password)
+
     for file in os.listdir(folder):
         quizzes = get_questions_from_file(folder, file)
-        load_questions_to_redis_db(quizzes)
+        load_questions_to_redis_db(quizzes, connect)
         print(f'questions from {file} was uploaded')
 
 

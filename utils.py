@@ -1,17 +1,13 @@
-from environs import Env
 from redis import Redis
 
 
-env = Env()
-env.read_env()
-
-
-def create_redis_connect():
+def create_redis_connect(host, port, password):
     connect = Redis(
-        host=env('REDIS_HOST'),
-        port=env('REDIS_PORT'), 
-        password=env('REDIS_PASSWORD'),
-        decode_responses=True)
+        host=host,
+        port=port, 
+        password=password,
+        decode_responses=True
+    )
 
     if connect.ping():
         return connect
@@ -84,7 +80,7 @@ def get_or_set_vk_user_state(connect, user_id):
 
     if user_state is None:
         connect.set(f'{user_id}_state', 'NEUTRAL')
-        return('NEUTRAL') # ASKED_QUESTION
+        return('NEUTRAL')
 
     else:
         return user_state
