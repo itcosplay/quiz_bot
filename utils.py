@@ -51,7 +51,7 @@ def get_explanation(connect, question):
 def set_user_score(connect, user_id):
     current_user_score = connect.get(f'{user_id}_score')
 
-    if current_user_score is None:
+    if current_user_score:
         connect.set(f'{user_id}_score', 1)
 
     else:
