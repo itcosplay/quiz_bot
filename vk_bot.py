@@ -118,7 +118,6 @@ def handle_commands(event, vk_api, connect):
             user_answer = event.text
             current_question = connect.get(user_id)
             right_answer = connect.hget('question', current_question)
-            print(right_answer)
 
             if get_short_answer(user_answer) == get_short_answer(right_answer):
                 set_user_score(connect, user_id)

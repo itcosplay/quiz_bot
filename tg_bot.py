@@ -18,18 +18,18 @@ logger = logging.getLogger(__file__)
 env = Env()
 env.read_env()
 
-connect = create_redis_connect(
+CONNECT = create_redis_connect(
     host=env('REDIS_HOST'),
     port=env('REDIS_PORT'),
     password=env('REDIS_PASSWORD')
 )
 
-quiz_keyboard = [
+QUIZ_KEYBOARD = [
     ['Новый вопрос', 'Сдаться'],
     ['Мой счет']
 ]
 
-reply_markup = ReplyKeyboardMarkup(quiz_keyboard, resize_keyboard=True)
+REPLY_MARKUP = ReplyKeyboardMarkup(QUIZ_KEYBOARD, resize_keyboard=True)
 
 ASKED_QUESTION = range(1)
 
@@ -37,14 +37,15 @@ ASKED_QUESTION = range(1)
 def start(update: Update, _):
     update.message.reply_text(
         text="I'm a quiz bot, let's play! (Use keyboard please)",
-        reply_markup=reply_markup)
+        reply_markup=REPLY_MARKUP
+    )
 
 
 def send_question(update: Update, _):
     user_id = update.message.from_user.id
 
-    current_question = connect.hrandfield('question')
-    connect.set(user_id, current_question)
+    current_question = CONNECT.hrandfield('question')
+    CONNECT.set(user_id, current_question)
 
     update.message.reply_text(text=current_question)
 
@@ -73,11 +74,11 @@ def handle_answer(update, _):
         return ASKED_QUESTION
 
     user_id = update.message.from_user.id
-    current_question = connect.get(user_id)
-    right_answer = connect.hget('question', current_question)
+    current_question = CONNECT.get(user_id)
+    right_answer = CONNECT.hget('question', current_question)
 
     if get_short_answer(user_answer) == get_short_answer(right_answer):
-        set_user_score(connect, user_id)
+        set_user_score(CONNECT, user_id)
 
         explanation = get_explanation(right_answer)
 
@@ -97,17 +98,17 @@ def handle_answer(update, _):
 
 def give_up(update, _):
     user_id = update.message.from_user.id
-    current_question = connect.get(user_id)
+    current_question = CONNECT.get(user_id)
 
-    right_answer = connect.hget('question', current_question)
+    right_answer = CONNECT.hget('question', current_question)
 
     text = 'Что ж, вот какой был правильный ответ:'
     text += f'\n{right_answer}'
     text += '\n\nВот другой вопрос'
     update.message.reply_text(text)
 
-    current_question = connect.hrandfield('question')
-    connect.set(user_id, current_question)
+    current_question = CONNECT.hrandfield('question')
+    CONNECT.set(user_id, current_question)
 
     update.message.reply_text(current_question)
 
@@ -124,7 +125,7 @@ def leave_quiz(update, _):
 
 def show_score(update, _):
     user_id = update.message.from_user.id
-    user_score = connect.get(f'{user_id}_score')
+    user_score = CONNECT.get(f'{user_id}_score')
 
     text = f'Правильных ответов: {user_score}'
 
