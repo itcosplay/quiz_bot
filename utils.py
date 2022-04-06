@@ -49,7 +49,7 @@ def set_user_score(connect, user_id):
     if current_user_score:
         current_user_score = int(current_user_score) + 1
         connect.set(f'{user_id}_score', current_user_score)
-        
+
     else:
         connect.set(f'{user_id}_score', 1)
 
@@ -61,8 +61,9 @@ def get_or_set_vk_user_state(connect, user_id):
     '''
     user_state = connect.get(f'{user_id}_state')
 
-    if user_state is None:
+    if not user_state:
         connect.set(f'{user_id}_state', 'NEUTRAL')
+
         return('NEUTRAL')
 
     else:

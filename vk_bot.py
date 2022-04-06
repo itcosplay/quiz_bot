@@ -20,6 +20,133 @@ from utils import get_or_set_vk_user_state
 logger = logging.getLogger(__file__)
 
 
+def handle_new_questions_command(vk_api, connect, user_id, keyboard):
+    user_state = get_or_set_vk_user_state(connect, user_id)
+
+    if user_state == 'NEUTRAL':
+        current_question = connect.hrandfield('question')
+        connect.set(user_id, current_question)
+        connect.set(f'{user_id}_state', 'ASKED_QUESTION')
+
+        vk_api.messages.send(
+            user_id=user_id,
+            message=current_question,
+            keyboard=keyboard.get_keyboard(),
+            random_id=random.randint(1, 1000)
+        )
+
+    else:
+        vk_api.messages.send(
+            user_id=user_id,
+            message='Чтобы получить следующий вопрос, '
+                    'вам необходимо дать ответ на текущий :)',
+            keyboard=keyboard.get_keyboard(),
+            random_id=random.randint(1, 1000)
+        )
+
+
+def handle_give_up_command(vk_api, connect, user_id, keyboard):
+    user_state = get_or_set_vk_user_state(connect, user_id)
+
+    if user_state == 'ASKED_QUESTION':
+        current_question = connect.get(user_id)
+        right_answer = connect.hget('question', current_question)
+
+        text = 'Что ж, вот какой был правильный ответ:'
+        text += f'\n{right_answer}'
+        text += '\n\nВот другой вопрос'
+
+        vk_api.messages.send(
+            user_id=user_id,
+            message=text,
+            keyboard=keyboard.get_keyboard(),
+            random_id=random.randint(1, 1000)
+        )
+
+        current_question = connect.hrandfield('question')
+        connect.set(user_id, current_question)
+
+        vk_api.messages.send(
+            user_id=user_id,
+            message=current_question,
+            keyboard=keyboard.get_keyboard(),
+            random_id=random.randint(1, 1000)
+        )
+
+    else:
+        vk_api.messages.send(
+            user_id=user_id,
+            message='Используйте меню чтобы сыграть в викторину ;)',
+            keyboard=keyboard.get_keyboard(),
+            random_id=random.randint(1, 1000)
+        )
+
+
+def handle_score_command(vk_api, connect, user_id, keyboard):
+    user_state = get_or_set_vk_user_state(connect, user_id)
+
+    if user_state == 'NEUTRAL':
+        user_score = connect.get(f'{user_id}_score')
+        text = f'Правильных ответов: {user_score}'
+
+        vk_api.messages.send(
+            user_id=user_id,
+            message=text,
+            keyboard=keyboard.get_keyboard(),
+            random_id=random.randint(1, 1000)
+        )
+
+    else:
+        vk_api.messages.send(
+            user_id=user_id,
+            message='Чтобы увидеть счет, ответьте на вопрос :)',
+            keyboard=keyboard.get_keyboard(),
+            random_id=random.randint(1, 1000)
+        )
+
+
+def handle_answer(event, vk_api, connect, user_id, keyboard):
+    user_state = get_or_set_vk_user_state(connect, user_id)
+
+    if user_state == 'NEUTRAL':
+        vk_api.messages.send(
+            user_id=user_id,
+            message='Используйте меню чтобы сыграть в викторину ;)',
+            keyboard=keyboard.get_keyboard(),
+            random_id=random.randint(1, 1000))
+
+    if user_state == 'ASKED_QUESTION':
+        user_answer = event.text
+        current_question = connect.get(user_id)
+        right_answer = connect.hget('question', current_question)
+
+        if get_short_answer(user_answer) == get_short_answer(right_answer):
+            set_user_score(connect, user_id)
+
+            connect.set(f'{user_id}_state', 'NEUTRAL')
+
+            additional_answer = get_explanation(right_answer)
+
+            text = 'Правильно! Поздравляю!'
+            text += f' {additional_answer}'
+            text += '\n\nДля следующего вопроса нажми «Новый вопрос»'
+
+            vk_api.messages.send(
+                user_id=user_id,
+                message=text,
+                keyboard=keyboard.get_keyboard(),
+                random_id=random.randint(1, 1000)
+            )
+
+        else:
+            vk_api.messages.send(
+                user_id=user_id,
+                message='Неправильно… Попробуешь ещё раз?',
+                keyboard=keyboard.get_keyboard(),
+                random_id=random.randint(1, 1000)
+            )
+
+
 def handle_commands(event, vk_api, connect):
     keyboard = VkKeyboard(one_time=True)
 
@@ -28,120 +155,19 @@ def handle_commands(event, vk_api, connect):
     keyboard.add_line()
     keyboard.add_button('Мой счет', color=VkKeyboardColor.POSITIVE)
 
-    user_id=event.user_id
+    user_id = event.user_id
 
     if event.text == "Новый вопрос":
-        user_state = get_or_set_vk_user_state(connect, user_id)
-
-        if user_state == 'NEUTRAL':
-            current_question = connect.hrandfield('question')
-            connect.set(user_id, current_question)
-            connect.set(f'{user_id}_state', 'ASKED_QUESTION')
-
-            vk_api.messages.send(
-                user_id=user_id,
-                message=current_question,
-                keyboard=keyboard.get_keyboard(),
-                random_id=random.randint(1,1000))
-
-        else:
-            vk_api.messages.send(
-                user_id=user_id,
-                message='Чтобы получить следующий вопрос, вам необходимо дать ответ на текущий :)',
-                keyboard=keyboard.get_keyboard(),
-                random_id=random.randint(1,1000))
+        handle_new_questions_command(vk_api, connect, user_id, keyboard)
 
     elif event.text == 'Сдаться':
-        user_state = get_or_set_vk_user_state(connect, user_id)
-
-        if user_state == 'ASKED_QUESTION':
-            current_question = connect.get(user_id)
-            right_answer = connect.hget('question', current_question)
-
-            text = 'Что ж, вот какой был правильный ответ:'
-            text += f'\n{right_answer}'
-            text += '\n\nВот другой вопрос'
-
-            vk_api.messages.send(
-                user_id=user_id,
-                message=text,
-                keyboard=keyboard.get_keyboard(),
-                random_id=random.randint(1,1000))
-
-            current_question = connect.hrandfield('question')
-            connect.set(user_id, current_question)
-
-            vk_api.messages.send(
-                user_id=user_id,
-                message=current_question,
-                keyboard=keyboard.get_keyboard(),
-                random_id=random.randint(1,1000))
-
-        else:
-            vk_api.messages.send(
-                user_id=user_id,
-                message='Используйте меню чтобы сыграть в викторину ;)',
-                keyboard=keyboard.get_keyboard(),
-                random_id=random.randint(1,1000))
+        handle_give_up_command(vk_api, connect, user_id, keyboard)
 
     elif event.text == 'Мой счет':
-        user_state = get_or_set_vk_user_state(connect, user_id)
+        handle_score_command(vk_api, connect, user_id, keyboard)
 
-        if user_state == 'NEUTRAL':
-            user_score = connect.get(f'{user_id}_score')
-            text = f'Правильных ответов: {user_score}'
-
-            vk_api.messages.send(
-                    user_id=user_id,
-                    message=text,
-                    keyboard=keyboard.get_keyboard(),
-                    random_id=random.randint(1,1000))
-        
-        else:
-            vk_api.messages.send(
-                user_id=user_id,
-                message='Чтобы увидеть счет, ответьте на вопрос :)',
-                keyboard=keyboard.get_keyboard(),
-                random_id=random.randint(1,1000))
-    
     else:
-        user_state = get_or_set_vk_user_state(connect, user_id)
-
-        if user_state == 'NEUTRAL':
-            vk_api.messages.send(
-                user_id=user_id,
-                message='Используйте меню чтобы сыграть в викторину ;)',
-                keyboard=keyboard.get_keyboard(),
-                random_id=random.randint(1,1000))
-        
-        if user_state == 'ASKED_QUESTION':
-            user_answer = event.text
-            current_question = connect.get(user_id)
-            right_answer = connect.hget('question', current_question)
-
-            if get_short_answer(user_answer) == get_short_answer(right_answer):
-                set_user_score(connect, user_id)
-
-                connect.set(f'{user_id}_state', 'NEUTRAL')
-
-                additional_answer = get_explanation(right_answer)
-
-                text = 'Правильно! Поздравляю!'
-                text += f' {additional_answer}'
-                text += '\n\nДля следующего вопроса нажми «Новый вопрос»'
-
-                vk_api.messages.send(
-                    user_id=user_id,
-                    message=text,
-                    keyboard=keyboard.get_keyboard(),
-                    random_id=random.randint(1,1000))
-            
-            else:
-                vk_api.messages.send(
-                    user_id=user_id,
-                    message='Неправильно… Попробуешь ещё раз?',
-                    keyboard=keyboard.get_keyboard(),
-                    random_id=random.randint(1,1000))
+        handle_answer(event, vk_api, connect, user_id, keyboard)
 
 
 def main():
