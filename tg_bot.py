@@ -2,7 +2,7 @@ import logging
 
 from environs import Env
 
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler
 from telegram.ext import Filters
 from telegram.ext import ConversationHandler
@@ -15,44 +15,37 @@ from utils import set_user_score
 
 logger = logging.getLogger(__file__)
 
-env = Env()
-env.read_env()
 
-CONNECT = create_redis_connect(
-    host=env('REDIS_HOST'),
-    port=env('REDIS_PORT'),
-    password=env('REDIS_PASSWORD')
-)
+def start(update, _):
+    quiz_keyboard = [
+        ['Новый вопрос', 'Сдаться'],
+        ['Мой счет']
+    ]
 
-QUIZ_KEYBOARD = [
-    ['Новый вопрос', 'Сдаться'],
-    ['Мой счет']
-]
+    reply_markup = ReplyKeyboardMarkup(quiz_keyboard, resize_keyboard=True)
 
-REPLY_MARKUP = ReplyKeyboardMarkup(QUIZ_KEYBOARD, resize_keyboard=True)
-
-ASKED_QUESTION = range(1)
-
-
-def start(update: Update, _):
     update.message.reply_text(
         text="I'm a quiz bot, let's play! (Use keyboard please)",
-        reply_markup=REPLY_MARKUP
+        reply_markup=reply_markup
     )
 
 
-def send_question(update: Update, _):
+def send_question(update, context):
     user_id = update.message.from_user.id
+    connect = context.bot_data.get('connect')
 
-    current_question = CONNECT.hrandfield('question')
-    CONNECT.set(user_id, current_question)
+    current_question = connect.hrandfield('question')
+    connect.set(user_id, current_question)
 
     update.message.reply_text(text=current_question)
+
+    ASKED_QUESTION = context.bot_data.get('asked_question')
 
     return ASKED_QUESTION
 
 
-def handle_answer(update, _):
+def handle_answer(update, context):
+    ASKED_QUESTION = context.bot_data.get('asked_question')
     user_answer = update.message.text
 
     if user_answer == 'Новый вопрос':
@@ -64,7 +57,7 @@ def handle_answer(update, _):
         return ASKED_QUESTION
 
     if user_answer == 'Сдаться':
-        give_up(update, _)
+        give_up(update, context)
 
         return
 
@@ -73,12 +66,14 @@ def handle_answer(update, _):
 
         return ASKED_QUESTION
 
+    connect = context.bot_data.get('connect')
+
     user_id = update.message.from_user.id
-    current_question = CONNECT.get(user_id)
-    right_answer = CONNECT.hget('question', current_question)
+    current_question = connect.get(user_id)
+    right_answer = connect.hget('question', current_question)
 
     if get_short_answer(user_answer) == get_short_answer(right_answer):
-        set_user_score(CONNECT, user_id)
+        set_user_score(connect, user_id)
 
         explanation = get_explanation(right_answer)
 
@@ -96,21 +91,24 @@ def handle_answer(update, _):
         return ASKED_QUESTION
 
 
-def give_up(update, _):
+def give_up(update, context):
+    connect = context.bot_data.get('connect')
     user_id = update.message.from_user.id
-    current_question = CONNECT.get(user_id)
+    current_question = connect.get(user_id)
 
-    right_answer = CONNECT.hget('question', current_question)
+    right_answer = connect.hget('question', current_question)
 
     text = 'Что ж, вот какой был правильный ответ:'
     text += f'\n{right_answer}'
     text += '\n\nВот другой вопрос'
     update.message.reply_text(text)
 
-    current_question = CONNECT.hrandfield('question')
-    CONNECT.set(user_id, current_question)
+    current_question = connect.hrandfield('question')
+    connect.set(user_id, current_question)
 
     update.message.reply_text(current_question)
+
+    ASKED_QUESTION = context.bot_data.get('asked_question')
 
     return ASKED_QUESTION
 
@@ -120,12 +118,14 @@ def leave_quiz(update, _):
         'Вы покинули виктрорину,'
         ' если захотите сыграть еще, нажмите «Новый вопрос»'
     )
+
     return ConversationHandler.END
 
 
-def show_score(update, _):
+def show_score(update, context):
+    connect = context.bot_data.get('connect')
     user_id = update.message.from_user.id
-    user_score = CONNECT.get(f'{user_id}_score')
+    user_score = connect.get(f'{user_id}_score')
 
     text = f'Правильных ответов: {user_score}'
 
@@ -139,12 +139,24 @@ def main():
         level=logging.INFO
     )
 
+    env = Env()
+    env.read_env()
+
+    connect = create_redis_connect(
+        host=env('REDIS_HOST'),
+        port=env('REDIS_PORT'),
+        password=env('REDIS_PASSWORD')
+    )
+
+    ASKED_QUESTION = range(1)
+
     updater = Updater(env('TG_BOT_TOKEN'), use_context=True)
+    updater.dispatcher.bot_data.update({'connect': connect})
+    updater.dispatcher.bot_data.update({'asked_question': ASKED_QUESTION})
+
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler("start", start))
-    dp.add_handler
-
     dp.add_handler(
         ConversationHandler(
             entry_points=[
@@ -161,9 +173,9 @@ def main():
                     )
                 ]
             },
-            fallbacks=[CommandHandler('refuse', leave_quiz)])
+            fallbacks=[CommandHandler('refuse', leave_quiz)]
         )
-
+    )
     dp.add_handler(MessageHandler(Filters.regex('^(Мой счет)$'), show_score))
 
     updater.start_polling()
