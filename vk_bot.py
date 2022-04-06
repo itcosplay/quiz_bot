@@ -88,7 +88,6 @@ def handle_commands(event, vk_api, connect):
         user_state = get_or_set_vk_user_state(connect, user_id)
 
         if user_state == 'NEUTRAL':
-            user_id = str(user_id)
             user_score = connect.get(f'{user_id}_score')
             text = f'Правильных ответов: {user_score}'
 

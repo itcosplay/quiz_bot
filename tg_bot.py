@@ -88,7 +88,7 @@ def handle_answer(update, _):
 
     else:
         update.message.reply_text('Неправильно… Попробуешь ещё раз?')
-        
+
         return ASKED_QUESTION
 
 
@@ -121,7 +121,6 @@ def leave_quiz(update, _):
 
 def show_score(update, _):
     user_id = update.message.from_user.id
-    user_id = str(user_id)
     user_score = connect.get(f'{user_id}_score')
 
     text = f'Правильных ответов: {user_score}'

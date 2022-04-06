@@ -50,7 +50,6 @@ def get_explanation(connect, question):
 
 def set_user_score(connect, user_id):
     current_user_score = connect.get(f'{user_id}_score')
-    user_id = str(user_id)
 
     if current_user_score is None:
         connect.set(f'{user_id}_score', 1)
@@ -65,7 +64,6 @@ def get_or_set_vk_user_state(connect, user_id):
     If user has state - return state,
     else will be created new state and returned one
     '''
-    user_id = str(user_id)
     user_state = connect.get(f'{user_id}_state')
 
     if user_state is None:
