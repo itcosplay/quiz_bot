@@ -13,11 +13,6 @@ def create_redis_connect(host, port, password):
         return connect
 
 
-def get_question(connect):
-    question = connect.hrandfield('question')
-    return question
-
-
 def check_answer(connect, question, user_answer):
     right_answer = connect.hget('question', question)
     return get_short_answer(user_answer) == get_short_answer(right_answer)
@@ -47,10 +42,10 @@ def get_explanation(connect, question):
     explanation = right_answer[index:].strip()
 
     if len(explanation) > 2:
+
         return right_answer[index:]
 
-    else:
-        return ''
+    return ''
 
 
 def set_user_score(connect, user_id):

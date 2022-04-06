@@ -11,7 +11,6 @@ from vk_api.keyboard import VkKeyboard
 from vk_api.keyboard import VkKeyboardColor
 
 from utils import create_redis_connect
-from utils import get_question
 from utils import check_answer
 from utils import get_explanation
 from utils import set_user_score
@@ -35,7 +34,7 @@ def handle_commands(event, vk_api, connect):
         user_state = get_or_set_vk_user_state(connect, user_id)
 
         if user_state == 'NEUTRAL':
-            current_question = get_question(connect)
+            current_question = connect.hrandfield('question')
             connect.set(user_id, current_question)
             connect.set(f'{user_id}_state', 'ASKED_QUESTION')
 
@@ -69,7 +68,7 @@ def handle_commands(event, vk_api, connect):
                 keyboard=keyboard.get_keyboard(),
                 random_id=random.randint(1,1000))
 
-            current_question = get_question(connect)
+            current_question = connect.hrandfield('question')
             connect.set(user_id, current_question)
 
             vk_api.messages.send(

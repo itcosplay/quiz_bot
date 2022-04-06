@@ -59,23 +59,26 @@ def handle_answer(update, _):
             'Чтобы получить следующий вопрос,'
             ' вам необходимо дать ответ на текущий :)'
         )
+
         return ASKED_QUESTION
 
     if user_answer == 'Сдаться':
         give_up(update, _)
+
         return
 
     if user_answer == 'Мой счет':
         update.message.reply_text('Чтобы увидеть счет, ответьте на вопрос :)')
+
         return ASKED_QUESTION
 
     user_id = update.message.from_user.id
     current_question = connect.get(user_id)
 
     if check_answer(connect, current_question, user_answer):
-        additional_answer = get_explanation(connect, current_question)
+        explanation = get_explanation(connect, current_question)
         text = 'Правильно! Поздравляю!'
-        text += f' {additional_answer}'
+        text += f' {explanation}'
         text += '\n\nДля следующего вопроса нажми «Новый вопрос»'
 
         set_user_score(connect, user_id)
@@ -85,6 +88,7 @@ def handle_answer(update, _):
 
     else:
         update.message.reply_text('Неправильно… Попробуешь ещё раз?')
+        
         return ASKED_QUESTION
 
 
