@@ -10,12 +10,8 @@ def create_redis_connect(host, port, password):
     )
 
     if connect.ping():
+
         return connect
-
-
-def check_answer(connect, question, user_answer):
-    right_answer = connect.hget('question', question)
-    return get_short_answer(user_answer) == get_short_answer(right_answer)
 
 
 def get_short_answer(unswer):
@@ -24,8 +20,7 @@ def get_short_answer(unswer):
         '(', '.').replace('"', '.').split('.')[0].strip().lower()
 
 
-def get_explanation(connect, question):
-    right_answer = connect.hget('question', question)
+def get_explanation(right_answer):
     index = 0
     for char in right_answer:
         if char == '.':
@@ -52,11 +47,11 @@ def set_user_score(connect, user_id):
     current_user_score = connect.get(f'{user_id}_score')
 
     if current_user_score:
-        connect.set(f'{user_id}_score', 1)
-
-    else:
         current_user_score = int(current_user_score) + 1
         connect.set(f'{user_id}_score', current_user_score)
+        
+    else:
+        connect.set(f'{user_id}_score', 1)
 
 
 def get_or_set_vk_user_state(connect, user_id):

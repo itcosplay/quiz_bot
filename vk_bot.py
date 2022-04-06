@@ -11,7 +11,7 @@ from vk_api.keyboard import VkKeyboard
 from vk_api.keyboard import VkKeyboardColor
 
 from utils import create_redis_connect
-from utils import check_answer
+from utils import get_short_answer
 from utils import get_explanation
 from utils import set_user_score
 from utils import get_or_set_vk_user_state
@@ -117,14 +117,19 @@ def handle_commands(event, vk_api, connect):
         if user_state == 'ASKED_QUESTION':
             user_answer = event.text
             current_question = connect.get(user_id)
-            if check_answer(connect, current_question, user_answer):
+            right_answer = connect.hget('question', current_question)
+            print(right_answer)
+
+            if get_short_answer(user_answer) == get_short_answer(right_answer):
+                set_user_score(connect, user_id)
+
                 connect.set(f'{user_id}_state', 'NEUTRAL')
-                additional_answer = get_explanation(connect, current_question)
+
+                additional_answer = get_explanation(right_answer)
+
                 text = 'Правильно! Поздравляю!'
                 text += f' {additional_answer}'
                 text += '\n\nДля следующего вопроса нажми «Новый вопрос»'
-
-                set_user_score(connect, user_id)
 
                 vk_api.messages.send(
                     user_id=user_id,

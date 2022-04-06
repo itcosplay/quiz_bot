@@ -8,7 +8,7 @@ from telegram.ext import Filters
 from telegram.ext import ConversationHandler
 
 from utils import create_redis_connect
-from utils import check_answer
+from utils import get_short_answer
 from utils import get_explanation
 from utils import set_user_score
 
@@ -74,16 +74,19 @@ def handle_answer(update, _):
 
     user_id = update.message.from_user.id
     current_question = connect.get(user_id)
+    right_answer = connect.hget('question', current_question)
 
-    if check_answer(connect, current_question, user_answer):
-        explanation = get_explanation(connect, current_question)
+    if get_short_answer(user_answer) == get_short_answer(right_answer):
+        set_user_score(connect, user_id)
+
+        explanation = get_explanation(right_answer)
+
         text = 'Правильно! Поздравляю!'
         text += f' {explanation}'
         text += '\n\nДля следующего вопроса нажми «Новый вопрос»'
 
-        set_user_score(connect, user_id)
-
         update.message.reply_text(text)
+
         return ConversationHandler.END
 
     else:
