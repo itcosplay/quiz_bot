@@ -61,15 +61,6 @@ def get_questions_from_file(from_folder, file):
     return quizzes
 
 
-def load_questions_to_redis_db(quizzes, connect):
-    for quiz in quizzes:
-        connect.hset(
-            name='question',
-            key=quiz['question'],
-            value=quiz['answer']
-        )
-
-
 def main():
     '''Load questions from folders' files.txt to Redis'''
     env = Env()
@@ -103,7 +94,14 @@ def main():
 
     for file in os.listdir(folder):
         quizzes = get_questions_from_file(folder, file)
-        load_questions_to_redis_db(quizzes, connect)
+
+        for quiz in quizzes:
+            connect.hset(
+                name='question',
+                key=quiz['question'],
+                value=quiz['answer']
+            )
+
         print(f'questions from {file} was uploaded')
 
 
