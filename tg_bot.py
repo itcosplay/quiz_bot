@@ -2,18 +2,24 @@ import logging
 
 from environs import Env
 
+from enum import Enum
+
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler
 from telegram.ext import Filters
 from telegram.ext import ConversationHandler
 
-from utils import create_redis_connect
-from utils import get_short_answer
-from utils import get_explanation
-from utils import set_user_score
+from redis_scripts import create_redis_connect
+from redis_scripts import set_user_score
+from answers_handlers import get_short_answer
+from answers_handlers import get_explanation
 
 
 logger = logging.getLogger(__file__)
+
+
+class DialogStatus(Enum):
+    ASKED_QUESTION = 1
 
 
 def start(update, _):
@@ -39,13 +45,10 @@ def send_question(update, context):
 
     update.message.reply_text(text=current_question)
 
-    ASKED_QUESTION = context.bot_data.get('asked_question')
-
-    return ASKED_QUESTION
+    return DialogStatus.ASKED_QUESTION
 
 
 def handle_answer(update, context):
-    ASKED_QUESTION = context.bot_data.get('asked_question')
     user_answer = update.message.text
 
     if user_answer == 'Новый вопрос':
@@ -54,7 +57,7 @@ def handle_answer(update, context):
             ' вам необходимо дать ответ на текущий :)'
         )
 
-        return ASKED_QUESTION
+        return DialogStatus.ASKED_QUESTION
 
     if user_answer == 'Сдаться':
         give_up(update, context)
@@ -64,7 +67,7 @@ def handle_answer(update, context):
     if user_answer == 'Мой счет':
         update.message.reply_text('Чтобы увидеть счет, ответьте на вопрос :)')
 
-        return ASKED_QUESTION
+        return DialogStatus.ASKED_QUESTION
 
     connect = context.bot_data.get('connect')
 
@@ -88,7 +91,7 @@ def handle_answer(update, context):
     else:
         update.message.reply_text('Неправильно… Попробуешь ещё раз?')
 
-        return ASKED_QUESTION
+        return DialogStatus.ASKED_QUESTION
 
 
 def give_up(update, context):
@@ -108,9 +111,7 @@ def give_up(update, context):
 
     update.message.reply_text(current_question)
 
-    ASKED_QUESTION = context.bot_data.get('asked_question')
-
-    return ASKED_QUESTION
+    return DialogStatus.ASKED_QUESTION
 
 
 def leave_quiz(update, _):
@@ -148,11 +149,8 @@ def main():
         password=env('REDIS_PASSWORD')
     )
 
-    ASKED_QUESTION = range(1)
-
     updater = Updater(env('TG_BOT_TOKEN'), use_context=True)
     updater.dispatcher.bot_data.update({'connect': connect})
-    updater.dispatcher.bot_data.update({'asked_question': ASKED_QUESTION})
 
     dp = updater.dispatcher
 
@@ -166,7 +164,7 @@ def main():
                 )
             ],
             states={
-                ASKED_QUESTION: [
+                DialogStatus.ASKED_QUESTION: [
                     MessageHandler(
                         Filters.text & (~Filters.command),
                         handle_answer

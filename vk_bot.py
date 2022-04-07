@@ -10,18 +10,18 @@ from vk_api.longpoll import VkLongPoll
 from vk_api.keyboard import VkKeyboard
 from vk_api.keyboard import VkKeyboardColor
 
-from utils import create_redis_connect
-from utils import get_short_answer
-from utils import get_explanation
-from utils import set_user_score
-from utils import get_or_set_vk_user_state
+from redis_scripts import create_redis_connect
+from answers_handlers import get_short_answer
+from answers_handlers import get_explanation
+from redis_scripts import set_user_score
+from redis_scripts import get_vk_user_state
 
 
 logger = logging.getLogger(__file__)
 
 
 def handle_new_questions_command(vk_api, connect, user_id, keyboard):
-    user_state = get_or_set_vk_user_state(connect, user_id)
+    user_state = get_vk_user_state(connect, user_id)
 
     if user_state == 'NEUTRAL':
         current_question = connect.hrandfield('question')
@@ -46,7 +46,7 @@ def handle_new_questions_command(vk_api, connect, user_id, keyboard):
 
 
 def handle_give_up_command(vk_api, connect, user_id, keyboard):
-    user_state = get_or_set_vk_user_state(connect, user_id)
+    user_state = get_vk_user_state(connect, user_id)
 
     if user_state == 'ASKED_QUESTION':
         current_question = connect.get(user_id)
@@ -83,7 +83,7 @@ def handle_give_up_command(vk_api, connect, user_id, keyboard):
 
 
 def handle_score_command(vk_api, connect, user_id, keyboard):
-    user_state = get_or_set_vk_user_state(connect, user_id)
+    user_state = get_vk_user_state(connect, user_id)
 
     if user_state == 'NEUTRAL':
         user_score = connect.get(f'{user_id}_score')
@@ -106,7 +106,7 @@ def handle_score_command(vk_api, connect, user_id, keyboard):
 
 
 def handle_answer(event, vk_api, connect, user_id, keyboard):
-    user_state = get_or_set_vk_user_state(connect, user_id)
+    user_state = get_vk_user_state(connect, user_id)
 
     if user_state == 'NEUTRAL':
         vk_api.messages.send(

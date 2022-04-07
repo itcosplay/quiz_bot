@@ -4,7 +4,7 @@ import os
 
 from environs import Env
 
-from utils import create_redis_connect
+from redis_scripts import create_redis_connect
 
 
 logger = logging.getLogger(__file__)

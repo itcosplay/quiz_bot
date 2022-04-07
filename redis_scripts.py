@@ -13,34 +13,8 @@ def create_redis_connect(host, port, password):
 
         return connect
 
-
-def get_short_answer(unswer):
-    return unswer.replace(
-        ',', '.').replace(
-        '(', '.').replace('"', '.').split('.')[0].strip().lower()
-
-
-def get_explanation(right_answer):
-    index = 0
-    for char in right_answer:
-        if char == '.':
-            index += 1
-            break
-        if char == ',':
-            break
-        if char == '(':
-            index -= 1
-            break
-
-        index += 1
-
-    explanation = right_answer[index:].strip()
-
-    if len(explanation) > 2:
-
-        return right_answer[index:]
-
-    return ''
+    else:
+        raise ConnectionError('There is no connect to Redis...')
 
 
 def set_user_score(connect, user_id):
@@ -54,7 +28,7 @@ def set_user_score(connect, user_id):
         connect.set(f'{user_id}_score', 1)
 
 
-def get_or_set_vk_user_state(connect, user_id):
+def get_vk_user_state(connect, user_id):
     '''
     If user has state - return state,
     else will be created new state and returned one
